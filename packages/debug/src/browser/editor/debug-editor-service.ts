@@ -23,6 +23,7 @@ import { DebugSessionManager } from '../debug-session-manager';
 import { DebugEditorModel, DebugEditorModelFactory } from './debug-editor-model';
 import { BreakpointManager } from '../breakpoint/breakpoint-manager';
 import { DebugBreakpoint } from '../model/debug-breakpoint';
+import { DebugBreakpointWidget } from './debug-breakpoint-widget';
 
 @injectable()
 export class DebugEditorService {
@@ -73,6 +74,7 @@ export class DebugEditorService {
         const model = this.models.get(uri.toString());
         if (model) {
             model.render();
+            // TODO: hide the breakpoint widget if a breakpoint is removed
         }
     }
 
@@ -81,24 +83,39 @@ export class DebugEditorService {
         const uri = currentEditor && currentEditor.getResourceUri();
         return uri && this.models.get(uri.toString());
     }
-    get breakpoint(): DebugBreakpoint | undefined {
-        const { model } = this;
-        return model && model.breakpoint;
+
+    get logpoint(): DebugBreakpoint | undefined {
+        const logpoint = this.anyBreakpoint;
+        return logpoint && logpoint.logMessage ? logpoint : undefined;
     }
+    get logpointEnabled(): boolean | undefined {
+        const { logpoint } = this;
+        return logpoint && logpoint.enabled;
+    }
+
+    get breakpoint(): DebugBreakpoint | undefined {
+        const breakpoint = this.anyBreakpoint;
+        return breakpoint && breakpoint.logMessage ? undefined : breakpoint;
+    }
+    get breakpointEnabled(): boolean | undefined {
+        const { breakpoint } = this;
+        return breakpoint && breakpoint.enabled;
+    }
+
+    get anyBreakpoint(): DebugBreakpoint | undefined {
+        return this.model && this.model.breakpoint;
+    }
+
     toggleBreakpoint(): void {
         const { model } = this;
         if (model) {
             model.toggleBreakpoint();
         }
     }
-    get breakpointEnabled(): boolean | undefined {
-        const { breakpoint } = this;
-        return breakpoint && breakpoint.enabled;
-    }
     setBreakpointEnabled(enabled: boolean): void {
-        const { breakpoint } = this;
-        if (breakpoint) {
-            breakpoint.setEnabled(enabled);
+        const { anyBreakpoint } = this;
+        if (anyBreakpoint) {
+            anyBreakpoint.setEnabled(enabled);
         }
     }
 
@@ -116,6 +133,44 @@ export class DebugEditorService {
             return !!model.editor.getModel().getWordAtPosition(selection.getStartPosition());
         }
         return false;
+    }
+
+    addBreakpoint(context: DebugBreakpointWidget.Context): void {
+        const { model } = this;
+        if (model) {
+            const { breakpoint } = model;
+            if (breakpoint) {
+                model.breakpointWidget.show({ breakpoint, context });
+            } else {
+                model.breakpointWidget.show({
+                    position: model.position,
+                    context
+                });
+            }
+        }
+    }
+    editBreakpoint(): Promise<void>;
+    editBreakpoint(breakpoint: DebugBreakpoint): Promise<void>;
+    async editBreakpoint(breakpoint: DebugBreakpoint | undefined = this.anyBreakpoint): Promise<void> {
+        if (breakpoint) {
+            await breakpoint.open();
+            const model = this.models.get(breakpoint.uri.toString());
+            if (model) {
+                model.breakpointWidget.show(breakpoint);
+            }
+        }
+    }
+    closeBreakpoint(): void {
+        const { model } = this;
+        if (model) {
+            model.breakpointWidget.hide();
+        }
+    }
+    acceptBreakpoint(): void {
+        const { model } = this;
+        if (model) {
+            model.acceptBreakpoint();
+        }
     }
 
 }

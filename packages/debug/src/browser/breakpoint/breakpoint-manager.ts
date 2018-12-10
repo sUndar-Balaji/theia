@@ -15,6 +15,7 @@
  ********************************************************************************/
 
 import { injectable, inject } from 'inversify';
+import { DebugProtocol } from 'vscode-debugprotocol';
 import { StorageService } from '@theia/core/lib/browser';
 import { MarkerManager } from '@theia/markers/lib/browser/marker-manager';
 import URI from '@theia/core/lib/common/uri';
@@ -48,17 +49,14 @@ export class BreakpointManager extends MarkerManager<SourceBreakpoint> {
         this.setMarkers(uri, this.owner, breakpoints.sort((a, b) => a.raw.line - b.raw.line));
     }
 
-    addBreakpoint(uri: URI, line: number, column?: number): void {
+    addBreakpoint(uri: URI, data: DebugProtocol.SourceBreakpoint): void {
         const breakpoints = this.getBreakpoints(uri);
-        const newBreakpoints = breakpoints.filter(({ raw }) => raw.line !== line);
+        const newBreakpoints = breakpoints.filter(({ raw }) => raw.line !== data.line);
         if (breakpoints.length === newBreakpoints.length) {
             newBreakpoints.push({
                 uri: uri.toString(),
                 enabled: true,
-                raw: {
-                    line,
-                    column
-                }
+                raw: data
             });
             this.setBreakpoints(uri, newBreakpoints);
         }

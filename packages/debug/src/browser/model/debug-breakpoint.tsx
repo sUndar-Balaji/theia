@@ -31,6 +31,11 @@ export class DebugBreakpointData {
     readonly origins: SourceBreakpoint[];
 }
 
+export class DebugBreakpointDecoration {
+    readonly className: string;
+    readonly message: string[];
+}
+
 export class DebugBreakpoint extends DebugBreakpointData implements TreeElement {
 
     readonly uri: URI;
@@ -81,6 +86,22 @@ export class DebugBreakpoint extends DebugBreakpointData implements TreeElement 
         }
     }
 
+    updateOrigins(data: Partial<DebugProtocol.SourceBreakpoint>): void {
+        const breakpoints = this.breakpoints.getBreakpoints(this.uri);
+        let shouldUpdate = false;
+        const originLines = new Set();
+        this.origins.forEach(origin => originLines.add(origin.raw.line));
+        for (const breakpoint of breakpoints) {
+            if (originLines.has(breakpoint.raw.line)) {
+                Object.assign(breakpoint.raw, data);
+                shouldUpdate = true;
+            }
+        }
+        if (shouldUpdate) {
+            this.breakpoints.setBreakpoints(this.uri, breakpoints);
+        }
+    }
+
     get installed(): boolean {
         return !!this.raw;
     }
@@ -104,6 +125,16 @@ export class DebugBreakpoint extends DebugBreakpointData implements TreeElement 
     }
     get endColumn(): number | undefined {
         return this.raw && this.raw.endColumn;
+    }
+
+    get condition(): string | undefined {
+        return this.origin.raw.condition;
+    }
+    get hitCondition(): string | undefined {
+        return this.origin.raw.hitCondition;
+    }
+    get logMessage(): string | undefined {
+        return this.origin.raw.logMessage;
     }
 
     get source(): DebugSource | undefined {
@@ -132,7 +163,7 @@ export class DebugBreakpoint extends DebugBreakpointData implements TreeElement 
                 selection
             });
         } else {
-            this.editorManager.open(this.uri, {
+            await this.editorManager.open(this.uri, {
                 ...options,
                 selection
             });
@@ -148,12 +179,92 @@ export class DebugBreakpoint extends DebugBreakpointData implements TreeElement 
         if (!this.breakpoints.breakpointsEnabled || !this.verified) {
             classNames.push(DISABLED_CLASS);
         }
-        return <div title={this.message} className={classNames.join(' ')}>
+        const decoration = this.getDecoration();
+        return <div title={decoration.message.join('\n')} className={classNames.join(' ')}>
+            <span className={'theia-debug-breakpoint-icon ' + decoration.className} />
             <input type='checkbox' checked={this.origins[0].enabled} onChange={this.setBreakpointEnabled} />
             <span className='name'>{this.labelProvider.getName(this.uri)} </span>
             <span className='path'>{this.labelProvider.getLongName(this.uri.parent)} </span>
             <span className='line'>{this.line}</span>
         </div>;
+    }
+
+    getDecoration(): DebugBreakpointDecoration {
+        if (!this.enabled) {
+            return this.getDisabledBreakpointDecoration();
+        }
+        if (this.installed && !this.verified) {
+            return this.getUnverifiedBreakpointDecoration();
+        }
+        const messages: string[] = [];
+        if (this.logMessage || this.condition || this.hitCondition) {
+            const { session } = this;
+            if (this.logMessage) {
+                if (session && !session.capabilities.supportsLogPoints) {
+                    return this.getUnsupportedBreakpointDecoration('Logpoints not supported by this debug type');
+                }
+                messages.push('Log Message: ' + this.logMessage);
+            }
+            if (this.condition) {
+                if (session && !session.capabilities.supportsConditionalBreakpoints) {
+                    return this.getUnsupportedBreakpointDecoration('Conditional breakpoints not supported by this debug type');
+                }
+                messages.push('Expression: ' + this.condition);
+            }
+            if (this.hitCondition) {
+                if (session && !session.capabilities.supportsHitConditionalBreakpoints) {
+                    return this.getUnsupportedBreakpointDecoration('Hit conditional breakpoints not supported by this debug type');
+                }
+                messages.push('Hit Count: ' + this.hitCondition);
+            }
+        }
+        if (this.message) {
+            if (messages.length) {
+                messages[messages.length - 1].concat(', ' + this.message);
+            } else {
+                messages.push(this.message);
+            }
+        }
+        return this.getBreakpointDecoration(messages);
+    }
+    protected getUnverifiedBreakpointDecoration(): DebugBreakpointDecoration {
+        const decoration = this.getBreakpointDecoration();
+        return {
+            className: decoration.className + '-unverified',
+            message: [this.message || 'Unverified ' + decoration.message[0]]
+        };
+    }
+    protected getDisabledBreakpointDecoration(): DebugBreakpointDecoration {
+        const decoration = this.getBreakpointDecoration();
+        return {
+            className: decoration.className + '-disabled',
+            message: ['Disabled ' + decoration.message[0]]
+        };
+    }
+
+    protected getBreakpointDecoration(message?: string[]): DebugBreakpointDecoration {
+        if (this.logMessage) {
+            return {
+                className: 'theia-debug-logpoint',
+                message: message || ['Logpoint']
+            };
+        }
+        if (this.condition || this.hitCondition) {
+            return {
+                className: 'theia-debug-conditional-breakpoint',
+                message: message || ['Conditional Breakpoint']
+            };
+        }
+        return {
+            className: 'theia-debug-breakpoint',
+            message: message || ['Breakpoint']
+        };
+    }
+    protected getUnsupportedBreakpointDecoration(message: string): DebugBreakpointDecoration {
+        return {
+            className: 'theia-debug-breakpoint-unsupported',
+            message: [message]
+        };
     }
 
     remove(): void {
