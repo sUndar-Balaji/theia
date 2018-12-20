@@ -50,7 +50,8 @@ export class HostedPluginServerImpl implements HostedPluginServer {
         @inject(HostedPluginReader) private readonly reader: HostedPluginReader,
         @inject(HostedPluginSupport) private readonly hostedPlugin: HostedPluginSupport,
         @inject(HostedInstanceManager) protected readonly hostedInstanceManager: HostedInstanceManager) {
-    }
+
+        }
 
     dispose(): void {
         this.hostedPlugin.clientClosed();

@@ -122,7 +122,7 @@ export class PluginHostRPC {
                     }
                 }
             }
-        }, envExt, preferencesManager);
+        }, envExt, preferencesManager, rpc);
         return pluginManager;
     }
 }

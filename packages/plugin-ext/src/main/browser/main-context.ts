@@ -34,6 +34,7 @@ import { NotificationMainImpl } from './notification-main';
 import { ConnectionMainImpl } from './connection-main';
 import { WebviewsMainImpl } from './webviews-main';
 import { TasksMainImpl } from './tasks-main';
+import { StorageMainImpl } from './plugin-storage';
 import { LanguagesContributionMainImpl } from './languages-contribution-main';
 
 export function setUpPluginApi(rpc: RPCProtocol, container: interfaces.Container): void {
@@ -83,6 +84,9 @@ export function setUpPluginApi(rpc: RPCProtocol, container: interfaces.Container
 
     const webviewsMain = new WebviewsMainImpl(rpc, container);
     rpc.set(PLUGIN_RPC_CONTEXT.WEBVIEWS_MAIN, webviewsMain);
+
+    const storageMain = new StorageMainImpl(container);
+    rpc.set(PLUGIN_RPC_CONTEXT.STORAGE_MAIN, storageMain);
 
     const pluginConnection = new ConnectionMainImpl(rpc);
     rpc.set(PLUGIN_RPC_CONTEXT.CONNECTION_MAIN, pluginConnection);

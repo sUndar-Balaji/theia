@@ -2353,6 +2353,18 @@ declare module '@theia/plugin' {
         subscriptions: { dispose(): any }[];
 
         /**
+         * A memento object that stores state in the context
+         * of the currently opened [workspace](#workspace.workspaceFolders).
+         */
+        workspaceState: Memento;
+
+        /**
+         * A memento object that stores state independent
+         * of the current opened [workspace](#workspace.workspaceFolders).
+         */
+        globalState: Memento;
+
+        /**
          * The absolute file path of the directory containing the extension.
          */
         extensionPath: string;
@@ -2379,6 +2391,39 @@ declare module '@theia/plugin' {
         * [`globalState`](#ExtensionContext.globalState) to store key value data.
         */
         storagePath: string | undefined;
+    }
+
+    /**
+     * A memento represents a storage utility. It can store and retrieve
+     * values.
+     */
+    export interface Memento {
+
+        /**
+         * Return a value.
+         *
+         * @param key A string.
+         * @return The stored value or `undefined`.
+         */
+        get<T>(key: string): T | undefined;
+
+        /**
+         * Return a value.
+         *
+         * @param key A string.
+         * @param defaultValue A value that should be returned when there is no
+         * value (`undefined`) with the given key.
+         * @return The stored value or the defaultValue.
+         */
+        get<T>(key: string, defaultValue: T): T;
+
+        /**
+         * Store a value. The value must be JSON-stringifyable.
+         *
+         * @param key A string.
+         * @param value A value. MUST not contain cyclic references.
+         */
+        update(key: string, value: any): Thenable<void>;
     }
 
     /**

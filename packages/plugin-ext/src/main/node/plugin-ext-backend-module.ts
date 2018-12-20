@@ -17,6 +17,7 @@
 import { interfaces } from 'inversify';
 import { PluginApiContribution } from './plugin-service';
 import { BackendApplicationContribution } from '@theia/core/lib/node';
+import { PluginsKeyValueStorage } from './plugins-key-value-storage';
 import { PluginDeployerContribution } from './plugin-deployer-contribution';
 import {
     PluginDeployer, PluginDeployerResolver, PluginDeployerFileHandler,
@@ -49,7 +50,10 @@ export function bindMainBackend(bind: interfaces.Bind): void {
 
     bind(PluginServer).to(PluginDeployerImpl).inSingletonScope();
 
+    bind(PluginsKeyValueStorage).toSelf().inSingletonScope();
+
     bind(PluginPathsService).to(PluginPathsServiceImpl).inSingletonScope();
+    bind(PluginPathsServiceImpl).toSelf().inSingletonScope();
     bind(ConnectionHandler).toDynamicValue(ctx =>
         new JsonRpcConnectionHandler(pluginPathsServicePath, () =>
             ctx.container.get(PluginPathsService)

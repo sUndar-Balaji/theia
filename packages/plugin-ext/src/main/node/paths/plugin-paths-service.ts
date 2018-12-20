@@ -111,7 +111,7 @@ export class PluginPathsServiceImpl implements PluginPathsService {
         return path.join(theiaDir, PluginPaths.PLUGINS_WORKSPACE_STORAGE_DIR);
     }
 
-    private async getTheiaDirPath(): Promise<string> {
+    async getTheiaDirPath(): Promise<string> {
         const homeDir = await this.getUserHomeDir();
         return path.join(
             homeDir,
