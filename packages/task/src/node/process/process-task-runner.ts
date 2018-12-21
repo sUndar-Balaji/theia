@@ -25,7 +25,6 @@ import {
     RawProcessFactory,
     TerminalProcessFactory
 } from '@theia/process/lib/node';
-import URI from '@theia/core/lib/common/uri';
 import { TaskFactory } from './process-task';
 import { TaskRunner } from '../task-runner';
 import { Task } from '../task';
@@ -136,7 +135,7 @@ export class ProcessTaskRunner implements TaskRunner {
      * is no guarantee that a command we find will be the one executed, if multiple commands with
      * the same name exist.
      * @param command command name to look for
-     * @param cwd current working directory
+     * @param cwd current working directory (as a fs path, not URI)
      */
     protected async findCommand(command: string, cwd: string): Promise<string | undefined> {
         const systemPath = process.env.PATH;
@@ -148,7 +147,7 @@ export class ProcessTaskRunner implements TaskRunner {
             }
         } else {
             // look for command relative to cwd
-            const resolvedCommand = FileUri.fsPath(new URI(cwd).resolve(command));
+            const resolvedCommand = FileUri.fsPath(FileUri.create(cwd).resolve(command));
 
             if (await this.executableFileExists(resolvedCommand)) {
                 return resolvedCommand;
@@ -160,7 +159,7 @@ export class ProcessTaskRunner implements TaskRunner {
                         const pathArray: string[] = systemPath.split(pathDelimiter);
 
                         for (const p of pathArray) {
-                            const candidate = FileUri.fsPath(new URI(p).resolve(command));
+                            const candidate = FileUri.fsPath(FileUri.create(p).resolve(command));
                             if (await this.executableFileExists(candidate)) {
                                 return candidate;
                             }
